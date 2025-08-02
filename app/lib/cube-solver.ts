@@ -1,4 +1,3 @@
-// Cube state representation and solver implementation
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export interface CubeState {
@@ -19,14 +18,11 @@ interface State {
   moves: string[]
 }
 
-// AI-enhanced heuristic counter
 let heuristicCallCount = 0
 const aiHeuristicCache = new Map<string, number>()
 
-// Initialize Gemini AI
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null
 
-// Create a solved cube state
 export function createSolvedCube(): CubeState {
   const faces = []
   for (let i = 0; i < 6; i++) {
@@ -35,7 +31,6 @@ export function createSolvedCube(): CubeState {
   return { faces }
 }
 
-// Check if cube is solved
 export function isGoal(current: CubeState, goal: CubeState): boolean {
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 9; j++) {
@@ -47,7 +42,6 @@ export function isGoal(current: CubeState, goal: CubeState): boolean {
   return true
 }
 
-// Standard heuristic: Count displaced pieces (stickers not in correct position)
 function getDisplacedPiecesHeuristic(current: CubeState, goal: CubeState): number {
   let displacedCount = 0
 
@@ -59,12 +53,9 @@ function getDisplacedPiecesHeuristic(current: CubeState, goal: CubeState): numbe
     }
   }
 
-  // Divide by 2 since each move typically affects multiple stickers
-  // This ensures the heuristic is admissible (never overestimates)
   return Math.ceil(displacedCount / 8)
 }
 
-// Format cube state for AI analysis
 function formatCubeStateForAI(cube: CubeState): string {
   const faceNames = ["Up(White)", "Left(Orange)", "Front(Green)", "Right(Red)", "Back(Blue)", "Down(Yellow)"]
   const colorNames = ["W", "O", "G", "R", "B", "Y"]
@@ -83,7 +74,6 @@ function formatCubeStateForAI(cube: CubeState): string {
   return formatted
 }
 
-// Get AI-enhanced heuristic
 async function getAIEnhancedHeuristic(current: CubeState, goal: CubeState): Promise<number> {
   if (!genAI) {
     return getDisplacedPiecesHeuristic(current, goal)
@@ -91,7 +81,6 @@ async function getAIEnhancedHeuristic(current: CubeState, goal: CubeState): Prom
 
   const stateKey = hashCubeState(current)
 
-  // Check cache first
   if (aiHeuristicCache.has(stateKey)) {
     return aiHeuristicCache.get(stateKey)!
   }
@@ -123,7 +112,6 @@ Respond with ONLY a single number representing your best estimate of moves neede
     const result = await model.generateContent(prompt)
     const response = result.response.text().trim()
 
-    // Extract number from response
     const aiEstimate = Number.parseInt(response.match(/\d+/)?.[0] || "0")
 
     if (aiEstimate > 0 && aiEstimate < 50) {
@@ -134,25 +122,20 @@ Respond with ONLY a single number representing your best estimate of moves neede
     console.warn("AI heuristic failed, falling back to standard:", error)
   }
 
-  // Fallback to standard heuristic
   return getDisplacedPiecesHeuristic(current, goal)
 }
 
-// Smart heuristic that occasionally uses AI
 async function getSmartHeuristic(current: CubeState, goal: CubeState): Promise<number> {
   heuristicCallCount++
 
-  // Use AI every 15 heuristic calls for enhanced evaluation
   if (heuristicCallCount % 15 === 0 && genAI) {
     console.log(`🤖 Consulting AI for heuristic evaluation (call #${heuristicCallCount})...`)
     return await getAIEnhancedHeuristic(current, goal)
   }
 
-  // Use standard heuristic most of the time
   return getDisplacedPiecesHeuristic(current, goal)
 }
 
-// Apply permutation to face
 function applyPermutation(face: number[], perm: number[]): number[] {
   const temp = [...face]
   for (let i = 0; i < perm.length; i++) {
@@ -161,7 +144,6 @@ function applyPermutation(face: number[], perm: number[]): number[] {
   return face
 }
 
-// Apply a move to the cube
 export function applyMove(cube: CubeState, move: string): CubeState {
   const newCube: CubeState = {
     faces: cube.faces.map((face) => [...face]),
@@ -397,7 +379,6 @@ export function applyMove(cube: CubeState, move: string): CubeState {
   return newCube
 }
 
-// Generate a scrambled cube
 export function scrambleCube(moves: number): { state: CubeState; moves: string[] } {
   const validMoves = ["U", "U'", "U2", "D", "D'", "D2", "R", "R'", "R2", "L", "L'", "L2"]
   let state = createSolvedCube()
@@ -412,17 +393,15 @@ export function scrambleCube(moves: number): { state: CubeState; moves: string[]
   return { state, moves: appliedMoves }
 }
 
-// Hash function for cube states
 function hashCubeState(cube: CubeState): string {
   return cube.faces.map((face) => face.join("")).join("|")
 }
 
-// Update the solveCube function to use async heuristics
 export async function solveCube(scrambledCube: CubeState, goalCube: CubeState): Promise<SolveResult> {
   return new Promise(async (resolve) => {
     const startTime = Date.now()
-    heuristicCallCount = 0 // Reset counter
-    aiHeuristicCache.clear() // Clear cache for new solve
+    heuristicCallCount = 0 
+    aiHeuristicCache.clear() 
 
     const openSet: State[] = []
     const visited = new Set<string>()
@@ -467,7 +446,6 @@ export async function solveCube(scrambledCube: CubeState, goalCube: CubeState): 
         return
       }
 
-      // Generate neighbors
       for (const move of validMoves) {
         const neighborCube = applyMove(currentState.cube, move)
         const neighborHash = hashCubeState(neighborCube)
